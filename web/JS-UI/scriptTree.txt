@@ -1,0 +1,72 @@
+function cargaTree(){
+	$.ajax(
+		{
+        url: 'http://localhost:8084/ProbandoJSON_WEB/ArbolMapas',
+		async:false,
+        type: "POST",
+        success: function(data){
+                console.log("TreeData: "+data);
+				treeData=eval(data);
+				
+				$("#tree3").dynatree({
+			checkbox: true,
+			selectMode: 3,
+			children: treeData,
+			onSelect: function(select, node) {
+				// Get a list of all selected nodes, and convert to a key array:
+				var selKeys = $.map(node.tree.getSelectedNodes(), function(node){
+					return node.data.key;
+				});
+				
+				  
+				
+				
+				$(".dynatree-partsel").each(function(){
+					var node = $.ui.dynatree.getNode(this);
+					/*
+					var selectedNodes = node.getSelectedNodes();
+            var selectedKeys = $.map(selectedNodes, function(node){
+                return node.data.key;
+            });
+            console.log("Selected keys: " + selectedKeys.join(", "));
+					
+					*/
+				
+					//console.log(node);
+					var hijos=node.getChildren();
+					for(var i=0; i<hijos.length;i++){
+						if(hijos[i].bSelected){
+								console.log(hijos[i].data.key);
+						}
+						
+					}
+					
+					//console.log(node.data.title);
+				});
+				
+				$("#echoSelection3").text(selKeys.join(", "));
+
+				// Get a list of all selected TOP nodes
+				var selRootNodes = node.tree.getSelectedNodes(true);
+				// ... and convert to a key array:
+				var selRootKeys = $.map(selRootNodes, function(node){
+					return node.data.key;
+				});
+				$("#echoSelectionRootKeys3").text(selRootKeys.join(", "));
+				$("#echoSelectionRoots3").text(selRootNodes.join(", "));
+			},
+			onDblClick: function(node, event) {
+				node.toggleSelect();
+			},
+			onKeydown: function(node, event) {
+				if( event.which == 32 ) {
+					node.toggleSelect();
+					return false;
+				}
+			},
+			idPrefix: "dynatree-Cb3-"
+		});
+		
+		}
+});
+}

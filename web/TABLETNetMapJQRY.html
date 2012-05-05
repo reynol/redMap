@@ -1,0 +1,1595 @@
+<html>
+<head>
+<title> tabletest </title>
+<link rel="stylesheet" href="stilo.css" type="text/css" media="screen">
+<script src="reynoljsJQUERY.js" type="text/javascript"></script>
+<script src="menusContextuales.js" type="text/javascript"></script>
+
+
+	<link rel="stylesheet" type="text/css" media="screen" href="menus.css" />
+	<link rel="stylesheet" href="jquery-ui/jquery-ui.css"> 
+	<link rel="stylesheet" href="jquery.contextmenu.css"> 	
+	
+	<link rel="stylesheet" type="text/css" href="mnu2.css" />
+	
+	<script src="jquery-ui/jquery-1.6.min.js"></script> 
+	<script src="jquery.contextmenu.js" type="text/javascript"></script>
+	<script src="jquery-ui/jquery.ui.core.js"></script> 
+	<script src="jquery-ui/jquery.ui.widget.js"></script> 
+	<script src="jquery-ui/jquery.ui.mouse.js"></script> 
+	<script src="jquery-ui/jquery.ui.button.js"></script> 
+	<script src="jquery-ui/jquery.ui.draggable.js"></script> 
+	<script src="jquery-ui/jquery.ui.position.js"></script> 
+	<script src="jquery-ui/jquery.ui.dialog.js"></script> 
+	
+	<script src="jquery-ui/jquery.svg.min.js"></script> 
+	<script src="jquery-ui/jquery.svgdom.min.js"></script> 
+
+
+		<style> 
+		body { font-size: 80.5%; }
+		label, input { display:block; }
+		input.text { margin-bottom:12px; width:95%; padding: .4em; }
+		fieldset { padding:0; border:0; margin-top:25px; }
+		h1 { font-size: 1.2em; margin: .6em 0; }
+		div#users-contain { width: 350px; margin: 20px 0; }
+		div#users-contain table { margin: 1em 0; border-collapse: collapse; width: 100%; }
+		div#users-contain table td, div#users-contain table th { border: 1px solid #eee; padding: .6em 10px; text-align: left; }
+		.ui-dialog .ui-state-error { padding: .3em; }
+		.validateTips { border: 1px solid transparent; padding: 0.3em; }
+	</style> 
+<script>
+var conexiones=[], formas=[], elementos=[], lineas=[], svg, Root,band=false;
+var temp,e, item_menu_temp;
+var menuContex=document.getElementById("menuv");
+var mouseDownX,mouseDownY; // guarda las posiciones X y Y donde se creara un nuevo dispositivo.
+var nuevoDevice = false;  // indica si se crea un nuevo dispositivo(true) o se mudifica un existente (false)
+var b_dragMap=false;  // indica si se esta arrastrando el miniMapa
+conector={
+		b_conectorCentral: false,  		// indica si los dispositivos tendran imagen de conector central
+		DOM_itm_cnct:null,			//contiene el elemento dom del conectorCentral
+		DOM_dispositivoTarget1:null,		//contiene el elemento dom del dispositivo origen del conector
+		DOM_dispositivoTarget2:null		//contiene el elemento dom del dispositivo destino del conector
+};
+
+
+
+    
+function nuevoElemento(el){
+			el.node.reynol="umm";
+			elementos.push(el);
+			formas.push(el.node);
+			
+			
+}
+function nuevaLinea(linea){
+//coloco la line al inici del SVG ( para que siempre queden abajo)
+
+			inicio=document.getElementById("selector");
+			linea.node.parentNode.insertBefore(linea.node,inicio);		
+
+
+			lineas.push(linea);
+			
+}
+		
+function getCentro(el){
+				obj1 = el;
+				
+			var bb1 = obj1.getBBox();
+			var centro={
+				x:	bb1.x + bb1.width / 2,
+				y:	bb1.y + bb1.height / 2
+			}
+			
+			return centro;
+			
+}
+
+
+
+
+
+
+
+
+window.onload = function () {
+			
+	//cargar menu Tool Bar	
+	cargaMenuToolBar();
+	//carga el shift Map
+	loadShiftMap();
+	
+	$("#shiftMap_drag").draggable({
+							containment: "#shiftMap",
+							start: function(){
+								//se esta arrastrando el minimapa.
+								b_dragMap=true;
+							},
+							drag: function(e){
+							/*pasos:
+							se obtiene la diferencia entre la equina de shiftMap y 
+							la esquina de el shiftMap_drag, obtengo cuantos px los separa.
+							Mediante una operacion obtengo a cuanto equivale esa separacion
+							al desplazaciento del scroll.
+							128                          _      totaWidhDocument
+							separacion(shift-shiftdrag)  -       X  
+							
+							*/			
+							
+					            //Desplazamiento Horizontal
+
+							var left=$("#shiftMap_drag").position().left -$(window).scrollLeft() ;
+							var left2= $("#shiftMap").position().left -$(window).scrollLeft() ;
+
+							//la esquina - wid_esquina es el tamaño
+							tama=left-left2;
+							var des=(tama * ($(document).width()-0))/$("#shiftMap").width();
+							//console.log("Esto es el desplazamiento");
+							//console.log(des);
+							$(window).scrollLeft(des);
+							
+							//Desplazamiento vertical
+							var top=$("#shiftMap_drag").position().top -$(window).scrollTop() ;
+							var top2= $("#shiftMap").position().top -$(window).scrollTop() ;
+
+							//la esquina - wid_esquina es el tamaño
+							tama=top-top2;
+							var des=(tama * ($(document).height()-0))/$("#shiftMap").height();
+							//console.log("Esto es el desplazamiento");
+							//console.log(des);
+							$(window).scrollTop(des);
+							
+							
+							
+							},
+							stop: function(e, ui){
+								//se dejo de usar el minimapa
+								b_dragMap=false;
+							}
+							
+							
+							});
+							
+							
+	$(window).scroll( function(e){
+		// si se esta arrastrando el minimapa no se actualiza el minimapa central(seria redundante)
+		if(!b_dragMap){
+		console.log("se esta actualizando minimapa");
+								/*
+								Procedimiento:
+								obtengo la equina de el shiftMap y le sumo el desplazamiento del scrool trasformado
+								a su equivalente a la distancia entre shiftMap y shiftMap_drag.
+								
+								128 --totalWidthDocument
+								X __  scroll
+								
+								Ejemplo:
+								 La esquina es 1135, a esto le tengo que sumar el escrol transformado a su
+								 equivalente a escala en el minimapa, con la regla de 3.
+								 
+								nota: en el desplazamiento tambien puede usarse, la diferencia entre
+								el tamaño del shiftMap_drag y el ShiftMap, esto  es lo que se desplaza el scrool.
+								
+								*/
+		
+		
+	
+								//desplazamiento minimapa horizontal miniMapa
+								
+								var left2= $("#shiftMap").position().left -$(window).scrollLeft() ;
+								var despla= ($(window).scrollLeft() *$("#shiftMap").width()) / $(document).width() ;
+								$("#shiftMap_drag").css('left',(left2-0)+despla);  
+								
+								//desplazamiento minimapa vertical Minimapa
+								var top2= $("#shiftMap").position().top -$(window).scrollTop() ;
+								despla= ($(window).scrollTop() *$("#shiftMap").height()) / $(document).height() ;
+								$("#shiftMap_drag").css('top',(top2-0)+despla);  
+		}							
+								
+								//Desplazamiento en la ventana
+	
+	
+	}	
+	
+	);						
+	
+	
+	//cambia el tipo de monitorieo
+	$('#opc_ping').click(function(){
+		$('#puerto').attr("disabled", true); 
+		$('#ping').addClass("negritas"); 
+		
+	});
+	
+	$('#opc_puerto').click(function(){
+		$('#ping').removeClass("negritas"); 
+		$('#puerto').removeAttr("disabled"); 
+	});
+	
+
+			
+	
+	svg= new reynol();
+	svg.create('container',640,480);
+
+	Root=svg.svgRoot;
+	
+	
+	// Carga dispositivos en canvas.
+	cargaDevices();
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	
+	//para probar menu contextual
+
+	var menu1 = [
+	  {'Agregar dispositivo':function(menuItem,menu) {   addNuevoDispositivo(menu);   } },
+	  $.contextMenu.separator,
+	  {'Option 2':function(menuItem,menu) { alert("You clicked Option 2!"); } }
+	];
+	$(function() {
+	  $('#universe').contextMenu(menu1,{theme:'osx'});
+	});
+
+
+
+
+
+
+////////////////////////////////////77
+
+
+
+//////////////////////////////////////7
+
+
+
+
+
+
+
+
+/*
+	 $(Root).bind("contextmenu.canvas", function(e){
+		addMenuContextualRoot(e,$(this)[0]);
+		return false; 
+	  });
+	  
+	  */
+
+	  //El selector de items
+	  
+	  $(Root).bind("mousedown.canvas", function(evt){
+			console.log("click en canvas");
+			//si esta seleccionado algun menu desplegable superior, se oculta
+			$('.m_Tab').removeClass("active");
+			
+			
+		       svg.selector.x=evt.pageX;
+			svg.selector.y=evt.pageY;
+			svg.selector.funcion(evt.clientX,evt.clientY);
+			svg.show(svg.selector.rec);
+			
+			$(Root).bind("mousemove.canvas_mousemove", function(evt){
+			Root.setAttribute("style", "cursor:auto;");
+				svg.selector.funcion(evt.pageX,evt.pageY);
+			});
+			
+	  });
+	  
+	  $(Root).bind("mouseup.canvas", function(evt){
+		$(Root).unbind(".canvas_mousemove");
+		svg.seleccionados();
+		svg.hide(svg.selector.rec);
+	  });
+	  
+	  
+	  
+	  
+	
+	root=Root;
+	
+	
+	
+      /*
+      $('#scroll-trigger').click(function() {
+        $(this).hide();
+        var viewport = $('#container');
+        $('#scroll-overlay')
+          .css('left', viewport.css('left'))
+          .css('top', viewport.css('top'))
+          .css('width', viewport.width())
+          .css('height', viewport.height())
+          .css('z-index', 99)
+          .css('display', '');
+		//activo modo pan
+		svg.setMousePan();
+		
+		//$(svg).mousemove(
+		//	function(e){
+		//	panMouseMove(e);
+		//	}
+		//);
+     
+      });
+
+      $('#scroll-done').click(function() {
+        $('#scroll-overlay')
+          .css('z-index', -1)
+          .css('display', 'none');
+        $('#scroll-trigger').show();
+		svg.removeMousePan();
+      });
+      
+      */
+	
+	
+ 
+};
+
+
+
+
+
+
+function Color(){
+
+	return "rgb("+parseInt(Math.random()*255)+","+parseInt(Math.random()*255)+","+parseInt(Math.random()*255)+")"
+
+}
+
+function getRadioButtonSelectedValue()
+{
+var ctrl=document.frmSO.so;
+    for(i=0;i<ctrl.length;i++)
+        if(ctrl[i].checked) return ctrl[i].value;
+}
+
+function conexion(forma1, forma2, linea) {
+
+        obj1 = forma1.node;
+        obj2 = forma2.node;
+		
+
+		if(!linea){
+
+				linea=lineas[lineas.length-1].node;
+				centro=getCentro(obj2);
+
+				linea.setAttributeNS(null, "x2", centro.x);
+				linea.setAttributeNS(null, "y2", centro.y);
+			
+			//inserto las rutas en los 2 elementos
+				forma1.paths.push(new svg.enlaces(forma2,linea));
+				forma2.paths.push(new svg.enlaces(forma1,linea));
+
+		}else{
+		//actualizo el path
+				centro1=getCentro(obj1);
+				centro2=getCentro(obj2);
+				linea.setAttributeNS(null, "x1", centro1.x);
+				linea.setAttributeNS(null, "y1", centro1.y);
+				linea.setAttributeNS(null, "x2", centro2.x);
+				linea.setAttributeNS(null, "y2", centro2.y);
+			
+		
+		
+		}
+	
+}
+
+		function addNuevoDispositivo(cmenu) {
+			mouseDownY=cmenu.menu.position().top-24;
+			mouseDownX=cmenu.menu.position().left-24;
+			
+			//indico que sera un nuevo dispositivo
+			nuevoDevice=true;
+			
+				$( "#dialog-form" ).dialog( "open" );
+		}
+		
+
+		
+		
+
+function addEventosLinea (linea){
+
+			$(linea).click(
+				function(e){
+				console.log("clik line");
+				console.log(svg.select_line);
+					var lin=svg.select_line.node;
+					lin.setAttributeNS(null, "x1", e.target.getAttribute("x1"));
+					lin.setAttributeNS(null, "y1", e.target.getAttribute("y1"));
+					lin.setAttributeNS(null, "x2", e.target.getAttribute("x2"));
+					lin.setAttributeNS(null, "y2", e.target.getAttribute("y2"));
+					
+				}
+			);	
+			
+	var menu1 = [
+	  {'Agregar Nota':function(menuItem,menu) {  alert("You clicked Option 1!");   } },
+	  $.contextMenu.separator,
+	  {'Eliminar':function(menuItem,menu) { alert("You clicked Option 2!"); } }
+	];
+	$(function() {
+	  $(linea).contextMenu(menu1,{theme:'osx'});
+	});		
+}
+
+function conectarDispositivos(){
+ //alert(dispositivo1.id); 
+            //conector(e,temp);
+			document.getElementById("menuv").style.display="none";
+			var centro=getCentro(conector.DOM_dispositivoTarget1);
+			nuevaLinea(svg.Linea(centro.x, centro.y, centro.x, centro.x, 5,"black",Color()));
+				
+			//temp=elementos[formas.indexOf(el)];
+			
+			//Obtengo la linea creada
+			elemento=lineas[lineas.length-1].node;
+			
+			addEventosLinea(elemento);
+				
+			
+
+			$(Root).bind("mousemove.conectaDispositivos", function(e){
+								
+							
+								elemento.setAttributeNS(null, "x2", e.pageX);
+								elemento.setAttributeNS(null, "y2", e.pageY);
+		
+									 
+								 
+							}); 
+			$(Root).bind("mouseup.conectaDispositivos", function(e){
+									
+									dispositivo1=elementos[formas.indexOf(conector.DOM_dispositivoTarget1)];
+									dispositivo2=elementos[formas.indexOf(e.target)];
+									//alert(temp);
+									//alert(obj2);
+									conexion(dispositivo1,dispositivo2);
+									
+									//valoresoriginales para futuras ligas y no inferir en onmouseup
+									//svg.conector.linea=null;
+									//svg.conector.funcion=null;
+									$(this).unbind(".conectaDispositivos");
+									
+									
+									
+							
+							
+							
+						});
+						//nue
+			
+}		
+		
+
+
+$(function() {
+		// a workaround for a flaw in the demo system (http://dev.jqueryui.com/ticket/4375), ignore!
+		$( "#dialog:ui-dialog" ).dialog( "destroy" );
+		
+		
+			
+			
+			
+//var selected = select.children( ":selected" ),
+//value = selected.val() ? selected.text() : "";
+
+		$('.accordion .head').click(function() {
+				$(this).next().toggle();
+				return false;
+			}).next().hide();
+
+
+		$( "#dialog-form" ).dialog({
+			autoOpen: false,
+			height: 330,
+			width: 400,
+			modal: true,
+			buttons: {
+				"Acaptar": function() {
+
+					var tipo = $( "#tipo option:selected" ),
+					    direccion = $( "#direccion" ),
+					    nombre = $( "#nombre" ),
+					    puerto=$("#puerto")
+					    radio_selected=$("input[@name='grupoRadio']:checked").val();;
+					    
+					
+					var imagen=tipo.val();
+					
+					
+					if ( nuevoDevice ) {	  
+						  //Inserto nuevo sispositivo
+						insertarDispositivo(imagen,nombre.val(),direccion.val(),puerto.val(),direccion.val(),radio_selected);
+						
+						$( this ).dialog( "close" );
+					}else{
+					
+						actualizaDispositivo(nombre.val(),direccion.val(),puerto.val(), radio_selected, imagen); // previamente se guardo el target.
+						
+						$( this ).dialog( "close" );
+					}
+					
+				},
+				Cancelar: function() {
+					$( this ).dialog( "close" );
+				}
+			},
+			close: function() {
+				
+			}
+		});
+ 
+	
+	});		
+	
+
+function insertarDispositivo(imagen, nombre, direccion, puerto, id, radio){
+	//Crea nuevo dispositivo
+	var element=svg.Imagen(imagen, 'move',mouseDownX, mouseDownY, 48,48,id, "device");
+	nuevoElemento(element);
+	//Coloca la direccion[:puerto]
+	if(radio=='puerto'){
+		element.txt_ip.textContent =  (puerto)?direccion+":"+puerto:direccion;
+		element.b_puerto=true;
+		element.puerto=puerto;
+	}else{
+		element.txt_ip.textContent = direccion;
+		element.b_puerto=false;
+	}
+	//coloca el nombre
+	element.txt_nombre.textContent = nombre;
+	element.nombre=nombre;
+	element.ip=direccion;
+	//alert(element.txt_nombre);
+	
+						//nuevoElemento(svg.Imagen(value,'move',200, 200, 48,48));
+	var form=element.node;
+						//alert("ok1");
+						//alert(form);
+						//form=
+						//nueva forma dragable
+	
+	
+
+      $(form).bind("touchstart touchmove", function(e) {
+        e.preventDefault();
+        var orig = e.originalEvent;
+        $(this).css({
+          top: orig.changedTouches[0].pageY,
+          left: orig.changedTouches[0].pageX
+        });
+	
+	//Mueve el Dispositivo/nombre/direccion
+								 
+								 $(this)[0].setAttributeNS(null,'x',orig.changedTouches[0].pageX-24);	
+								 $(this)[0].setAttributeNS(null,'y',orig.changedTouches[0].pageY-24);
+								 
+								 //obtengo el elemento para poder manipular los text
+								 
+								 var el=elementos[formas.indexOf($(this)[0])];
+								 el.txt_nombre.setAttributeNS(null,'x',orig.changedTouches[0].pageX-24);
+								 el.txt_nombre.setAttributeNS(null,'y',orig.changedTouches[0].pageY-24);
+								 
+								 el.txt_ip.setAttributeNS(null,'x',orig.changedTouches[0].pageX-24);
+								 el.txt_ip.setAttributeNS(null,'y',orig.changedTouches[0].pageY+34);
+	
+	
+	
+      });
+	
+						
+						$(form).draggable({
+							start: function(){},
+							drag: function(e){
+								//si hay conector central se borra
+								if(conector.b_conectorCentral){
+									grup = conector.DOM_itm_cnct.parentNode;
+									grup.parentNode.removeChild(grup);
+									conector.b_conectorCentral=false;
+								}
+								//Mueve el Dispositivo/nombre/direccion
+								 
+								 $(this)[0].setAttributeNS(null,'x',e.pageX-24);	
+								 $(this)[0].setAttributeNS(null,'y',e.pageY-24);
+								 
+								 //obtengo el elemento para poder manipular los text
+								 
+								 var el=elementos[formas.indexOf($(this)[0])];
+								 el.txt_nombre.setAttributeNS(null,'x',e.pageX-24);
+								 el.txt_nombre.setAttributeNS(null,'y',e.pageY-24);
+								 
+								 el.txt_ip.setAttributeNS(null,'x',e.pageX-24);
+								 el.txt_ip.setAttributeNS(null,'y',e.pageY+34);
+								 
+							/*	  
+								  //console.log($(this)[0].getAttribute("x")+"+"+$(this)[0].getAttribute("y"));
+								  state = $(this)[0].parentNode.getCTM();
+								 // console.log(state.e+"+"+state.f);
+								  // console.log(e.pageX+"-"+e.pageY);
+								 var dx = (e.pageX)-(state.e);
+								 var dy = (e.pageY)-(state.f);  
+								   
+								//console.log(dx+","+dy);
+								
+								  
+								 $(this)[0].parentNode.setAttribute('transform',"translate("+dx+","+dy+")");
+								 
+								 
+								 */
+								 
+								 
+								 //obtengo el objeto DOM del dispositivo
+								 el=elementos[formas.indexOf($(this)[0])];
+									//actualizo paths
+									if(el.paths.length>0){
+										for (var i = el.paths.length; i--;) {
+											conexion(el, el.paths[i].destino,el.paths[i].path);
+										}
+									}
+									
+									
+								//Modifico el tamaño del contenedor SVG si sobrepasa su tamaño.
+								//Ancho
+								if(e.pageX>=($('#universe').attr("width")-24)){
+									//console.log('la anchura es :' + (($('#universe').attr("width")-0)+24));
+									$('#universe').attr('width',(($('#universe').attr("width")-0)+24));
+									
+									var ancho=(($(window).width()*.10)/e.pageX)*$(window).width();
+									$("#shiftMap_drag").css("width",ancho);  
+
+
+									//$("#shiftMap_drag").css('left',(left2-0)+($("#shiftMap").width()-ancho));  
+									 									
+								}
+								//Alto
+								if(e.pageY>=($('#universe').attr("height")-24)){
+								//console.log('la aaltura es :' + (($('#universe').attr("height")-0)+24));
+									$('#universe').attr('height',(($('#universe').attr("height")-0)+24));
+									
+									var alto=(($(window).height()*.10)/e.pageY)*$(window).height();
+									$("#shiftMap_drag").css("height",alto);  
+
+								//$("#shiftMap_drag").css('top',(top2-0)+($("#shiftMap").height()-alto));  
+
+								}
+								
+							
+								
+
+								
+							} ,
+							stop: function(e){
+							console.log($(e.target).position().top);
+							}
+							
+						});
+						/*
+						//Add a las forma su Menu Contextual
+						 $(form).bind("contextmenu", function(e){
+								e.stopPropagation();
+								
+								addMenuContextualDispositivo(e,$(this)[0]);
+								return false; 
+						  });
+						*/  
+						var menu1 = [
+						  {'Conectar':function(menuItem,menu) {
+									conector.DOM_dispositivoTarget1=menu.target;
+								        conectarDispositivos(menu);  } },
+						  $.contextMenu.separator,
+						  {'Configuración':function(menuItem,menu) { 
+						     //indico que sera actualizara el dispositivo
+							nuevoDevice=false;
+						      //indico el target, el DOM del elemento a modificar.
+						      conector.DOM_dispositivoTarget1=menu.target;
+						      
+						      
+						      //coloco los datos previos en el dialog.
+						      $("#tipo").val($(menu.target).attr("href"));
+						      var element=elementos[formas.indexOf(menu.target)];
+		//				      console.log('puerto'+element.b_puerto);
+						      if(element.b_puerto){
+							$('#opc_puerto').prop('checked', true);
+							
+						      }else{
+							$('#opc_ping').prop('checked', true);
+						      }
+							$("#direccion" ).val(element.ip);
+							$("#nombre" ).val(element.nombre);
+							$("#puerto").val(element.puerto);
+						      
+						      //abro el dialogo
+						      $( "#dialog-form" ).dialog( "open" );
+						  }
+						  }];
+						$(function() {
+						  $(form).contextMenu(menu1,{theme:'osx'});
+						});
+
+
+
+
+
+
+ 
+						  
+						  
+						  
+						  // Anadir mouse over img conector central solo si se pasa sobre un device
+						  
+						  //$(form).parent().mouseenter(
+						$(form).mouseenter(
+						  function(e){
+							//evita que se cree mas de un conector central, cada vez que se salga del conector 
+							// y entre nuevamente al la forma que tiene el eventor mouseenter.
+							//si conector.b_conectorCentral=false se crea. si es True ya existe y no se vuelve a crear.
+							if(!conector.b_conectorCentral){
+									console.log("mouse enter");
+									var box=getCentro(e.target);
+									
+	//							conector.DOM_itm_cnct=svg.Imagen('imagenes/canvas/conct.png','pointer', box.x-8,box.y-8, 16,16).node;
+								conector.DOM_itm_cnct=svg.Imagen('imagenes/canvas/conct_arrow_c.png','pointer', box.x-8,box.y-8, 16,16,"id","conector").node;
+								grup = conector.DOM_itm_cnct.parentNode;
+								
+								//muevo ese grupo de imagen dentro del grupo de la imagen que se dio click
+								$(form).parent().get(0).appendChild(grup);
+								
+								
+								// habilita que el conector pueda ser arrastrado
+								//alert(conector.DOM_itm_cnct);
+								$(conector.DOM_itm_cnct).draggable({
+								//appendTo: 'body',
+								helper: 'clone', 
+								start: 
+								function(e){
+								// primer dispositivo (g --> g  >> primer hijo(img) )
+								conector.DOM_dispositivoTarget1=$(e.target).parent().parent().get(0).firstChild;
+								//alert(conector.DOM_dispositivoTarget1);
+								// Inicia la conexion
+								conectarDispositivos();
+								
+								},
+								stop: 
+								function(event, ui) {
+								   
+								}}
+								);
+
+								
+								
+								// indica que el Dispositivo si tiene conector "activo"
+								conector.b_conectorCentral=true;
+								
+							}
+								
+						  }
+						  );
+						  
+						$(form).parent().mouseleave(
+						function(){
+							console.log("mouse leave");
+							grup = conector.DOM_itm_cnct.parentNode;
+								if(conector.b_conectorCentral){
+									grup.parentNode.removeChild(grup);
+									conector.b_conectorCentral=false;
+								}
+							}
+						);
+}	
+
+function actualizaDispositivo(nombre, direccion, puerto,radio, nueva_imagen){
+//obtener el elemento apartir del DOM
+var element=elementos[formas.indexOf($(conector.DOM_dispositivoTarget1).get(0))];
+//actualizar datos
+	if(radio=='puerto'){
+		element.txt_ip.textContent =  (puerto)?direccion+":"+puerto:direccion;
+		element.b_puerto=true;
+		element.puerto=puerto;
+	}else{
+		element.txt_ip.textContent = direccion;
+		element.b_puerto=false;
+	}
+		
+	//actualiza nueva imagen
+//	console.log(nueva_imagen);
+//	console.log(element.node);
+	element.node.setAttributeNS("http://www.w3.org/1999/xlink", "href", nueva_imagen);
+	element.txt_nombre.textContent = nombre;
+	element.nombre=nombre;
+	element.ip=direccion;
+
+}
+	
+function cargaDevices(){
+devices=[
+{id:'IP1', posX: 100, posY: 600, img:'imagenes/canvas/workstation.png', nombre:"PC", direccion:"127.0.0.1", puerto: "",
+enlaces:[
+{ destino:'IP4',path: {id:'IP1-IP4'}},
+{ destino:'IP3',path: {id:'IP1-IP3'}},
+{ destino:'IP2',path: {id:'IP1-IP2'}}
+]
+},
+{id:'IP2', posX: 400, posY: 200, img:'imagenes/canvas/laptop.png', nombre:"Laptop", direccion:"127.0.0.1", puerto: "",
+enlaces:[
+{ destino:'IP3',path: {id:'IP2-IP3'}},
+{ destino:'IP4',path: {id:'IP2-IP4'}},
+{ destino:'IP1',path: {id:'IP1-IP2'}}]
+},
+{id:'IP3', posX: 700, posY: 200, img:'imagenes/canvas/firewall.png', nombre:"Firewall", direccion:"127.0.0.1", puerto: "",
+enlaces:[
+{ destino:'IP4',path: {id:'IP3-IP4'}},
+{ destino:'IP1',path: {id:'IP1-IP3'}},
+{ destino:'IP2',path: {id:'IP2-IP3'}}]
+},
+{id:'IP4', posX: 500, posY: 500, img:'imagenes/canvas/switch.png', nombre:"Switch", direccion:"127.0.0.1", puerto: "",
+enlaces:[
+{ destino:'IP1',path: {id:'IP1-IP4'}},
+{ destino:'IP2',path: {id:'IP2-IP4'}},
+{ destino:'IP3',path: {id:'IP3-IP4'}}
+]
+}
+];
+//inserto los dispositivos
+for(i=0; i< devices.length;i++){
+	mouseDownX=devices[i].posX;
+	mouseDownY=devices[i].posY;
+//	console.log(devices[i].img+','+devices[i].id);
+	insertarDispositivo(devices[i].img, devices[i].nombre, devices[i].direccion, devices[i].puerto, devices[i].id);
+	
+}
+//coloco sus enlaces
+for(i=0; i< devices.length;i++){
+	for(j=0; j< devices[i].enlaces.length;j++){
+		//verifico si el enlace existe
+		 temporal='#'+devices[i].enlaces[j].path.id;
+		
+		if($(temporal).length==0){
+		console.log($(temporal).length);
+		        console.log('Entro: '+'\'#'+devices[i].enlaces[j].path.id+'\'');
+				
+				//creo la linea 
+				var centro=getCentro($('#'+devices[i].id).get(0));
+				nuevaLinea(svg.Linea(centro.x, centro.y, centro.x, centro.x, 5 ,"black",devices[i].enlaces[j].path.id));
+				
+				//obtengo la linea recien creada
+				var lin=lineas[lineas.length-1].node;
+				//añoso eventos click y menucontextual
+				addEventosLinea(lin);
+				
+				dispositivo1=elementos[formas.indexOf($('#'+devices[i].id).get(0))];				
+				dispositivo2=elementos[formas.indexOf($('#'+devices[i].enlaces[j].destino).get(0))];
+
+				conexion(dispositivo1,dispositivo2);
+		}
+	
+	}
+}
+
+
+
+
+/*
+enlaces=[
+{ destino:'IP4',path: {id:'IP1-IP4'}},
+{ destino:'IP3',path: {id:'IP1-IP3'}},
+{ destino:'IP2',path: {id:'IP1-IP2'}},
+
+{ destino:'IP3',path: {id:'IP2-IP3'}},
+{ destino:'IP4',path: {id:'IP2-IP4'}},
+{ destino:'IP1',path: {id:'IP1-IP2'}},
+
+{ destino:'IP4',path: {id:'IP3-IP4'}},
+{ destino:'IP1',path: {id:'IP1-IP3'}},
+{ destino:'IP2',path: {id:'IP2-IP3'}},
+
+{ destino:'IP1',path: {id:'IP1-IP4'}},
+{ destino:'IP2',path: {id:'IP2-IP4'}},
+{ destino:'IP3',path: {id:'IP3-IP4'}}
+
+];
+
+*/
+
+
+}
+	
+function cargaMenuToolBar(){
+
+		tools_attr=[
+		{title: 'Herramienta Mover',img:'imagenes/toolbar/mover_tool.png'},
+		{title: 'Herramienta Seleccion',img:'imagenes/toolbar/seleccion_tool.png'},
+		{title: 'Herramienta Mover',img:'imagenes/toolbar/conector_tool.png'},
+		];	
+		for(i=0;i<tools_attr.length;i++){
+		div=document.createElement("div");
+		$(div).addClass("toolbar_item");
+
+		a=document.createElement("a");
+		$(a).attr('title','p');
+		//a.title=tools_attr[i].title;
+		$(a).addClass("item");
+		div.appendChild(a);
+
+		img=document.createElement("img");
+		//img.src=tools_attr[i].img;
+		$(img).attr('src',tools_attr[i].img);
+		a.appendChild(img);
+
+
+		$('#toolbar_iner').get(0).appendChild(div);
+		}
+
+		tools_attr=[
+		{title: 'Desktop',img:'imagenes/canvas/workstation.png'},
+		{title: 'Laptop',img:'imagenes/canvas/laptop.png'},
+		{title: 'servidor',img:'imagenes/canvas/server.png'},
+		{title: 'Impresora',img:'imagenes/canvas/impresora.png'},
+		{title: 'Wireless',img:'imagenes/canvas/wireless.png'},
+		{title: 'Firewall',img:'imagenes/canvas/firewall.png'},
+		{title: 'Hub',img:'imagenes/canvas/router.png'},
+		{title: 'Switch',img:'imagenes/canvas/switch.png'},
+		{title: 'Router',img:'imagenes/canvas/network-router-blue.png'},
+		{title: 'Monitor de red',img:'imagenes/canvas/network-monitor.png'},
+		{title: 'Network Cloud',img:'imagenes/canvas/network-cloud.png'}
+		];
+
+
+		for(i=0;i<tools_attr.length;i++){
+		div=document.createElement("div");
+		$(div).addClass("toolbar_item");
+
+		a=document.createElement("a");
+		//a.title=tools_attr[i].title;
+		$(a).attr('title','p');
+		$(a).addClass("item");
+		$(a).addClass("network");
+		div.appendChild(a);
+
+		img=document.createElement("img");
+		//img.width='24';
+		$(img).attr('width',24);
+		$(img).attr('src',tools_attr[i].img);
+		//img.src=tools_attr[i].img;
+		a.appendChild(img);
+
+
+		$('#toolbar_iner').get(0).appendChild(div);
+		}
+
+
+		//Clona los item menu que pueden ser arrastrado
+		$('.network').draggable({
+		appendTo: 'body',
+		helper: 'clone', 
+		stop: 
+		function(event, ui) {
+			//quito todos los seleccionados
+			$('.toolbar_item').removeClass('item_selected');
+			//Actualizo el lugar donde se solto el click
+			mouseDownY=event.pageY-24;
+			mouseDownX=event.pageX-24;
+			console.log("CLIENT");
+			console.log(event.clientY-24);
+			console.log(event.clientX-24);
+			console.log("PAGE");
+			console.log(event.pageY-24);
+			console.log(event.pageX-24);
+			insertarDispositivo($(item_menu_temp).attr('src'));
+		}}
+		);
+
+
+
+
+
+
+		$('.item').mousedown(seleccion_tool_item);
+
+
+		 function seleccion_tool_item(evt){
+				//obtengo el elemento imagen del menu item seleccionado
+				item_menu_temp=evt.target;
+				//alert(evt.target);
+				//quito todos los seleccionados
+				$('.toolbar_item').removeClass('item_selected');
+				// Al precionar la img coloco al div como seleccionado (img -> a -> div) 
+				$(evt.target).parent().parent().addClass('item_selected');
+		 }
+
+
+			$('#minimize img').toggle(
+			function() {
+				$('#minimize img').attr('src', 'imagenes/toolbar/expand.png');
+				//$('#toolbar_iner').css('display', 'none');
+				$('#toolbar_iner').animate({height:'0px', width: '38px', opacity: 1}, 300);
+				$('#toolbar').animate({height:'15px', width: '46px', opacity: 1}, 300);
+				
+			}, 
+			function() {
+				$('#minimize img').attr('src', 'imagenes/toolbar/collapse.png');
+				//$('#toolbar_iner').css('display', 'inline');
+				$('#toolbar_iner').animate({height:'430px', width: '38px', opacity: 1}, 300);
+				$('#toolbar').animate({height:'456px', width:'46px', opacity: 1}, 300);
+			});
+
+
+			
+			
+			
+			/////////////////////////////////////////////////////////////
+			////////////////////////////////////////////////////////////MAPA SUPERIOR
+			////////////////////////////////////////////////////////////
+			
+			
+			
+			
+			
+			
+			
+			
+				
+	 $(".menu li").mouseover(function(e) {
+	 //agrega el over solo si no esta activo.
+		if (!$(this).hasClass('active'))
+			$(this).addClass("m_over");
+	  }).mouseout(function(e){
+	    $(this).removeClass("m_over");
+	  });
+	  
+
+	
+            $('.menu').click(
+		function(e){
+			//solo para tabs
+			if ($(e.target).parent().hasClass('m_Tab')){
+				//solo se activa si el Tab tiene submenu
+				
+					//si hay un tab activo se quita y es el mismo, se deselecciona
+					if ($(e.target).parent().hasClass('active')){
+						$(e.target).parent().removeClass("active");
+						$(e.target).parent().addClass("m_over");
+					} else {
+						//quito todos los seleccionados y selecciono solo si es un submenu
+						$('.m_Tab').removeClass("active");
+						if ($(e.target).hasClass('m_sub')){
+						//quito el over	
+							$(e.target).parent().removeClass("m_over");
+						//despliego el submenu	
+							$(e.target).parent().addClass("active");
+						}	
+					
+					}
+					
+				
+				
+				
+				
+			}
+			
+			
+						
+		}
+	    );
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+			
+
+}	
+
+function loadShiftMap(){
+ $("#shiftMap").css("height",$(window).height()*.10).css("width",$(window).width()*.10);  
+ $("#shiftMap_drag").css("height",$(window).height()*.10).css("width",$(window).width()*.10);  
+}
+
+</script>
+
+  <style type="text/css" media="screen">
+    .ui-selected, .ui-unselecting {
+      border: 5px solid purple !important;
+    }
+
+    .box {
+      cursor: move;
+      position: absolute;
+      left: 0;
+	   background: url(imagenes/canvas/workstation_sel.png) no-repeat;
+	   z-index: 999;
+    }
+    
+  
+    
+    /* Endless desktop, Panning and scrolling */
+    #scroll-trigger {
+      background: transparent url(img/scroll_small.png) no-repeat top left;
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+    }
+
+    #scroll-overlay {
+      background: transparent url(img/scroll_big.png) no-repeat center center;
+      position: absolute;
+      z-index: -1;
+      cursor: move;
+    }
+
+    #scroll-overlay BUTTON {
+      position: absolute;
+     /* bottom: 5px;*/
+      margin: 0 auto;
+      font-size: 120%;
+      left: 0;
+      right: 0;
+      width: 100px;
+    }
+
+    #container {
+    /*  position: absolute; 
+        /*background-color: #e5ecf9;*/
+	/*background: #e5ecf9 url(grid_BG.png);*/
+      top: 0px;
+      left: 0;
+      right: 0;
+      bottom: 0;
+*/
+      /*border: 0px solid #7aa5d6;*/
+      /*overflow: hidden;*/
+    }
+
+    #universe {
+      position: absolute; 
+      background: #e5ecf9 url(grid_BG.png);
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+    /*  border: 1px dotted #000;*/ /* uncomment this to debug endless desktop */
+    }    
+
+    
+    .device {
+     
+      background: #000;
+      height: 50px; 
+      width: 50px; 
+    /*  border: 1px dotted #000;*/ /* uncomment this to debug endless desktop */
+    }        
+    
+	#toolbar_iner {
+		margin: 20px 4px;
+		text-align:center;
+		position: fixed;
+		top: 0%;
+		left: 0;
+		height: 430px; 
+		width: 38px; 
+		opacity: 1; 
+		display: block; 
+		
+		  background:#ededed;
+		 /* border:solid 1px #666;
+		  border-width: 1px 0 0 1px;*/
+		  
+		  /*padding:2px 5px;*/
+		  overflow:hidden; 
+		  /* CSS3 */
+		  -webkit-border-top-right-radius: 4px;
+		  -moz-border-radius-topright: 4px;
+		  border-top-right-radius: 4px;
+		  -webkit-border-bottom-right-radius: 4px;
+		  -moz-border-radius-bottomright: 4px;
+		  border-bottom-right-radius: 4px;
+		  
+		  -webkit-border-top-left-radius: 4px;
+		  -moz-border-radius-topleft: 4px;
+		  border-top-right-radius: 4px;
+		  -webkit-border-bottom-left-radius: 4px;
+		  -moz-border-radius-bottomleft: 4px;
+		  border-bottom-left-radius: 4px;
+		  
+		  
+		  /*horizontal vertical difuminado color*/
+		  -moz-box-shadow: 0px 3px 3px rgba(0,0,0,0.5);
+		  -webkit-box-shadow: 0px 3px 3px rgba(0,0,0,0.5);
+		  box-shadow: 0px 3px 3px rgba(0,0,0,0.5);
+
+	}
+	
+	
+	#toolbar {
+		position: fixed;
+		text-align:center;
+		top: 0%;
+		left: 0;
+		height: 456px; 
+		width: 46px; 
+		opacity: 1; 
+		display: block; 
+		
+		  background:#5b5b5b;
+		  border:solid 1px #404040;
+		  border-width: 1px;
+		  
+		 /*padding-top:10px ;*/
+		  overflow:hidden; 
+		  
+		  -moz-box-shadow: inset  -1px 1px 0px #797979; 
+		  /*-webkit-box-shadow: inset  0px 0px 2px #797979; 
+		  box-shadow: inset  0px 0px 2px #797979; */
+
+	}
+
+	#Map {
+
+	}
+	
+	#shiftMap {
+	position: fixed;
+	bottom: 0%;
+		right: 0;
+		height: 0px; 
+		width: 0px; 
+		opacity: 1; 
+		display: block; 
+		
+		  background:#5b5b5b;
+		  border:solid 1px #404040;
+		  border-width: 1px;
+		  
+		  overflow:hidden; 
+		  
+		  -moz-box-shadow: inset  -1px 1px 0px #797979; 
+		  -webkit-box-shadow: inset  -1px 1px 0px #797979; 
+		  box-shadow: inset  -1px 1px 0px #797979; 
+		  
+		  -moz-box-shadow:   -3px 3px 10px #797979; 
+		  -webkit-box-shadow:   -3px 3px 10px #797979; 
+		  box-shadow:  -3px 3px 10px #797979; 
+		  
+	}	
+	
+	#shiftMap_drag {
+		text-align:center;
+		position: fixed;
+		height: 0px; 
+		width: 0px; 
+		opacity: 1; 
+		display: block; 
+		
+		  background:#ededed;
+
+		  overflow:hidden; 
+		  /* CSS3 */
+
+		  
+		  
+		  /*horizontal vertical difuminado color*/
+	/*	  -moz-box-shadow: 0px 3px 3px rgba(0,0,0,0.5);
+		  -webkit-box-shadow: 0px 3px 3px rgba(0,0,0,0.5);
+		  box-shadow: 0px 3px 3px rgba(0,0,0,0.5);
+*/		  
+
+	}
+	
+	
+	#resultados{
+	top: 600;
+      
+      right: 0;
+	
+	}
+ 
+    
+    .item_selected { 
+		text-align:center;
+		width: 26px; 
+		height: 26px;
+		margin-left:5px;
+		
+		 background:#ffffff;
+		 border:solid 1px #797979;
+		 
+  
+		  /* CSS3 */
+		  -webkit-border-top-right-radius: 4px;
+		  -moz-border-radius-topright: 4px;
+		  border-top-right-radius: 4px;
+		  -webkit-border-bottom-right-radius: 4px;
+		  -moz-border-radius-bottomright: 4px;
+		  border-bottom-right-radius: 4px;
+		  
+		  -webkit-border-top-left-radius: 4px;
+		  -moz-border-radius-topleft: 4px;
+		  border-top-right-radius: 4px;
+		  -webkit-border-bottom-left-radius: 4px;
+		  -moz-border-radius-bottomleft: 4px;
+		  border-bottom-left-radius: 4px;
+
+   
+   }
+.item_over { 
+		text-align:center;
+		width: 26px; 
+		height: 26px;
+		margin-left:5px;
+		
+		 background:#fefefe;
+		 border:solid 1px #bebebe;
+		 
+  
+		  /* CSS3 */
+		  -webkit-border-top-right-radius: 4px;
+		  -moz-border-radius-topright: 4px;
+		  border-top-right-radius: 4px;
+		  -webkit-border-bottom-right-radius: 4px;
+		  -moz-border-radius-bottomright: 4px;
+		  border-bottom-right-radius: 4px;
+		  
+		  -webkit-border-top-left-radius: 4px;
+		  -moz-border-radius-topleft: 4px;
+		  border-top-right-radius: 4px;
+		  -webkit-border-bottom-left-radius: 4px;
+		  -moz-border-radius-bottomleft: 4px;
+		  border-bottom-left-radius: 4px;
+		  /*horizontal vertical grado  (cero en ver y ori  poner sombra en todos los contornos)*/
+		  -moz-box-shadow: inset  -1px -1px 5px #cccccc; 
+		  -webkit-box-shadow: inset  -1px -1px 5px #cccccc; 
+		  box-shadow: inset  -1px -1px 5px #dddddd; 
+		  
+   
+   }
+   
+.item_conector {
+
+background-color: #EEEEEE;
+width: 60px; 
+height: 60px;
+z-index: 500;      
+}
+
+
+.radio {
+  width: 19px;
+  height: 15px;
+  padding: 0 5px 0 0;
+  display: block;
+  clear: left;
+  float: left;
+}
+
+.bloque {
+  height: 40px;
+/*  margin: 0 0 20px 0;*/
+  padding: 0 10px 0 0;
+  display: block;
+  font: 12px/21px arial,sans-serif;
+}
+   
+.form_bloque_der {
+  width: 200px;
+  height: 40px;
+  clear: right;
+  float: right;
+}
+.form_bloque_izq {
+  font: 12px/21px arial,sans-serif;
+  font-weight: bolder; 
+  width: 100px;
+  height: 40px;
+  clear: left;
+  float: left;
+}
+.negritas{
+ font-weight: bolder; 
+}
+.select {
+  width: 190px;
+  height: 25px;
+  font: 12px/21px arial,sans-serif;
+}
+   
+   
+   
+  </style>
+
+</head>
+
+<body  style="cursor: auto;" >
+
+
+  <div id="container">
+
+		<div id="mapa">
+		</div>
+
+  		
+   <div class="menu"  style="position: absolute; z-index: 9998;">
+	<!--
+	m_izq produce una sombra.. se coloca z-indez abajo del padre para que la sombra no aparezca sobre el menu desplegable que 
+	esta al nivel de "menu"
+	-->
+	<div id="m_izq" style="z-index: 9990;">
+	
+        <ul>
+	
+	
+	    <li class="m_Tab">
+                <div id="" class="m_itm guardar"></div>
+            </li>
+	    
+	    <li class="m_Tab">
+                <div id="" class="m_itm rayo"></div>
+            </li>
+	    
+            <li class="m_Tab">
+	                    
+		<div id="" class="m_itm chart"></div>
+		
+            </li>
+            <li class="m_Tab">
+                <div id="" class="m_sub gear"></div>
+                      <div class="m_desp" >
+			
+			<ul>
+			    <li><a href="">Opciones</a></li>
+			    <li><a href="">Salir</a></li>
+			    <li></li>
+			</ul>
+			
+		</div>
+            </li>
+
+        </ul>
+	
+	</div>
+    </div>
+
+
+	<div id="scroll-trigger" title="Haga clic para desplazarse por la pantalla" > </div>   
+  </div>
+  <div id="scroll-overlay" style="display: none">
+    <div><button id="scroll-done">OK</button></div>
+  </div>
+		
+		
+		
+
+
+
+
+
+
+	<div id="menuv" style="position: absolute; z-index: 500; left: 603px; top: 148px; display: none; ">
+		<ul id="lista"></ul>
+	</div>
+	
+	<div id="dialog-form" title="Configuracion"> 
+	<form> 
+		<div class="bloque">
+			<div class="form_bloque_izq">
+				Tipo
+			</div>
+			<div class="form_bloque_der">
+				<select id="tipo" class="select">
+					<option value="imagenes/canvas/workstation.png">PC</option>
+					<option value="imagenes/canvas/laptop.png">Laptop</option>
+					<option value="imagenes/canvas/server.png">Servidor</option>
+					<option value="imagenes/canvas/impresora.png">Impresora</option>
+					<option value="imagenes/canvas/wireless.png">Wireless</option>
+					<option value="imagenes/canvas/router.png">Router</option>
+					<option value="imagenes/canvas/switch.png">Switch</option>
+					<option value="imagenes/canvas/firewall.png">FireWall</option>
+					<option value="baz">Otro</option>
+				</select>
+			</div>
+		</div>
+		<div class="bloque">
+			<div class="form_bloque_izq">
+				Dirección:
+			</div>
+			<div class="form_bloque_der">
+				<input type="text" name="direccion" id="direccion" value="127.0.0.1" class="text ui-widget-content ui-corner-all" /> 
+			</div>
+		</div>
+		<div class="bloque">
+			<div class="form_bloque_izq">
+				<input type="radio" name="grupoRadio" class="radio" id="opc_ping" value="ping" checked/> Ping  
+			</div>
+			<div id="ping" class="form_bloque_der negritas">
+				ICMP/ECHO
+			</div>
+		</div>
+		<div class="bloque">
+			<div class="form_bloque_izq">
+				<input type="radio" name="grupoRadio" class="radio" id="opc_puerto" value="puerto" /> Puerto  
+			</div>
+			<div class="form_bloque_der">
+				<input type="text" name="puerto" id="puerto" value="" class="text ui-widget-content ui-corner-all" disabled />
+			</div>
+		</div>
+		<div class="bloque">
+			<div class="form_bloque_izq">
+				<label for="nombre">Nombre(Opcional)</label> 
+			</div>
+			<div class="form_bloque_der">
+				<input type="text" name="nombre" id="nombre" value="" class="text ui-widget-content ui-corner-all" /> 
+			</div>
+		</div>
+	
+	</form> 
+</div> 
+	
+<div id="toolbar" >
+<a href="#min" id="minimize" title="Minimize"> 
+		<img alt="Workstation" src="imagenes/toolbar/collapse.png" style="display: inline;">
+		</a>
+		
+<div id="toolbar_iner"> 
+
+		</div>
+
+		</a>
+
+</div>
+<div id="Map">	
+<div id="shiftMap">	
+	<div id="shiftMap_drag">	
+	</div>	
+</div>	
+</div>	
+
+		
+<div>
+<div id='mc'></div>
+</div>
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

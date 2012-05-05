@@ -1,0 +1,41 @@
+<html>
+<head>
+	
+	<script src="jquery-ui/jquery-1.6.min.js"></script> 
+	<script src="jquery.contextmenu.js" type="text/javascript"></script>
+<link rel="stylesheet" href="jquery.contextmenu.css"> 	
+	<script>
+	window.onload = function () {
+		var menu1 = [
+  {'Option 1':function(menuItem,menu) { alert("You clicked Option 1!"); } },
+  $.contextMenu.separator,
+  {'Option 2':function(menuItem,menu) { alert("You clicked Option 2!"); } }
+];
+$(function() {
+  $('#svg').contextMenu(menu1,{theme:'osx'});
+});
+	}
+	</script>
+	
+	<style>
+	    #cont { 
+		text-align:center;
+		width: 260px; 
+		height: 260px;
+		}
+		#cont { 
+		text-align:center;
+		width: 260px; 
+		height: 260px;
+		z-index: 1006;
+		}
+	</style>
+	
+</head>
+<body>
+<svg width="1229" height="548" id="svg" >
+<text xmlns="http://www.w3.org/2000/svg" font-size="12pt" x="263" y="114" id="t1" stroke-opacity="1">Click something to move it</text>
+</svg>
+
+</body>
+</html>

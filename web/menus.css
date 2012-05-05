@@ -1,0 +1,58 @@
+/*
+ * Menús Simples con CSS
+ * Autor: Braulio Andrés Soncco Pimentel <braulio@buayacorp.com>
+ * http://www.buayacorp.com/
+ * 
+ * Esta hoja está bajo licencia de Creative Commons 
+ * http://creativecommons.org/licenses/by/2.0/
+ */
+
+
+/*
+	Menu Vertical
+*/
+#menuv {
+      border: 1px solid #999;
+	/*border: 1px solid #ACCFE8;*/
+	border-width: 1px 3px 3px 1px;
+	width: 100px;
+	font: 80% "Trebuchet MS", Arial, Helvetica, sans-serif;
+	background: #FFF;
+}
+
+#menuv ul, li {
+	list-style-type: none;
+}
+
+#menuv ul {
+	margin: 0;
+	padding: 0;
+}
+
+#menuv li {
+margin: 0px;
+      color: #000;
+      display: block;
+      padding: 3px;
+      border: 1px solid #fff;
+	background-color: transparent;
+}
+
+#menuv a {
+	/*text-decoration: none;
+	color: #3366CC;
+	background-color: transparent;
+	display: block;
+	padding: 3px 6px;
+	width: 88px;*/
+}
+
+#menuv li:hover {
+    border: 1px solid #0a246a;
+      background: #DBEBF6;
+}
+#menuv img {
+float:left;
+vertical-align: middle; padding-left: 2px; padding-top: 2px;
+margin-right:5px;
+}

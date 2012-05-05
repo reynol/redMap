@@ -1,0 +1,41 @@
+	function getCentro(el){
+					obj1 = el;
+					
+				var bb1 = obj1.getBBox();
+				var centro={
+					x:	bb1.x + bb1.width / 2,
+					y:	bb1.y + bb1.height / 2
+				}
+				
+				return centro;
+				
+	}
+	
+
+
+function actualizaDispositivo(nombre, direccion, puerto,radio, nueva_imagen){
+//obtener el elemento apartir del DOM
+var element=elementos[formas.indexOf($(conector.DOM_dispositivoTarget1).get(0))];
+//actualizar datos
+	if(radio=='puerto'){
+		element.txt_ip.textContent =  (puerto)?direccion+":"+puerto:direccion;
+		element.b_puerto=true;
+		element.puerto=puerto;
+	}else{
+		element.txt_ip.textContent = direccion;
+		element.b_puerto=false;
+	}
+		
+	//actualiza nueva imagen
+//	console.log(nueva_imagen);
+//	console.log(element.node);
+	element.node.setAttributeNS("http://www.w3.org/1999/xlink", "href", nueva_imagen);
+	element.txt_nombre.textContent = nombre;
+	element.nombre=nombre;
+	element.ip=direccion;
+
+}
+
+
+
+	
