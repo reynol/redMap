@@ -112,7 +112,7 @@ public class EnviarCorreo {
 
             // Se envia el correo.
             Transport t = session.getTransport("smtp");
-            t.connect("reynol@gmail.com", "11205802");
+            t.connect("reynol@gmail.com", "contrasenia");
             t.sendMessage(message, message.getAllRecipients());
             t.close();
             
